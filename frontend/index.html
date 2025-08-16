@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Optimizador de Portafolio</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        input {
+            margin: 5px;
+            padding: 5px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .btn {
+            margin: 5px;
+            padding: 7px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: #fff;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .project-card {
+            background-color: #f0f4f8;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tfoot td {
+            font-weight: bold;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Optimizador de Portafolio</h1>
+
+    <label>Capacidad:</label>
+    <input type="number" id="capacidad" min="0" value="10"><br>
+
+    <h3>Proyectos</h3>
+    <div id="proyectos-container"></div>
+    <button class="btn" onclick="agregarProyecto()">Agregar Proyecto</button>
+    <button class="btn" onclick="calcular()">Calcular</button>
+    <button class="btn" onclick="limpiar()">Limpiar</button>
+
+    <h3>Resultados</h3>
+    <table id="resultados-table" style="display:none;">
+        <thead>
+            <tr>
+                <th>Proyecto Seleccionado</th>
+            </tr>
+        </thead>
+        <tbody id="resultados-body"></tbody>
+        <tfoot>
+            <tr>
+                <td id="totales"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<script>
+let proyectosCount = 0;
+
+function agregarProyecto() {
+    proyectosCount++;
+    const container = document.getElementById('proyectos-container');
+    const div = document.createElement('div');
+    div.id = `proyecto-${proyectosCount}`;
+    div.className = 'project-card';
+    div.innerHTML = `
+        <label>Nombre:</label>
+        <input type="text" class="nombre" value="Proyecto ${proyectosCount}">
+        <label>Peso:</label>
+        <input type="number" class="peso" value="1" min="0">
+        <label>Ganancia:</label>
+        <input type="number" class="ganancia" value="1" min="0">
+        <button class="btn" onclick="eliminarProyecto(${proyectosCount})">Eliminar</button>
+    `;
+    container.appendChild(div);
+}
+
+function eliminarProyecto(id) {
+    const div = document.getElementById(`proyecto-${id}`);
+    div.remove();
+}
+
+function limpiar() {
+    document.getElementById('proyectos-container').innerHTML = '';
+    document.getElementById('resultados-table').style.display = 'none';
+    proyectosCount = 0;
+}
+
+async function calcular() {
+    const capacidad = parseInt(document.getElementById('capacidad').value);
+    const nombres = document.getElementsByClassName('nombre');
+    const pesos = document.getElementsByClassName('peso');
+    const ganancias = document.getElementsByClassName('ganancia');
+
+    const objetos = [];
+    for (let i = 0; i < nombres.length; i++) {
+        objetos.push({
+            nombre: nombres[i].value,
+            peso: parseInt(pesos[i].value),
+            ganancia: parseInt(ganancias[i].value)
+        });
+    }
+
+    const body = { capacidad, objetos };
+
+    try {
+        const response = await fetch('http://backend:8000/optimizar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            alert('Error: ' + JSON.stringify(err));
+            return;
+        }
+
+        const data = await response.json();
+        mostrarResultados(data);
+    } catch (err) {
+        alert('Error en la conexión con el servidor: ' + err);
+    }
+}
+
+function mostrarResultados(data) {
+    const table = document.getElementById('resultados-table');
+    const tbody = document.getElementById('resultados-body');
+    tbody.innerHTML = '';
+
+    data.seleccionados.forEach(p => {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.textContent = p;
+        row.appendChild(cell);
+        tbody.appendChild(row);
+    });
+
+    document.getElementById('totales').textContent = `Ganancia total: ${data.ganancia_total}, Peso total: ${data.peso_total}`;
+    table.style.display = 'table';
+}
+</script>
+</body>
+</html>
